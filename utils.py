@@ -1,3 +1,4 @@
+# utils.py
 import requests
 from datetime import datetime, timedelta
 import csv
@@ -10,7 +11,8 @@ def fetch_prices(API_URL, API_KEY, CURRENCIES, COINS):
     try:
         params = {
             'ids': ','.join(COINS),
-            'vs_currencies': ','.join(CURRENCIES)
+            'vs_currencies': ','.join(CURRENCIES),
+            'include_market_cap': 'true'  # Added to get market cap data
         }
         headers = {'x-cg-demo-api-key': API_KEY}
         
@@ -21,11 +23,13 @@ def fetch_prices(API_URL, API_KEY, CURRENCIES, COINS):
         return {
             'akt': {
                 'usd': data['akash-network']['usd'],
-                'sek': data['akash-network']['sek']
+                'sek': data['akash-network']['sek'],
+                'market_cap': data['akash-network']['usd_market_cap']  # Added market cap
             },
             'spice': {
                 'usd': data['spice-2']['usd'],
-                'sek': data['spice-2']['sek']
+                'sek': data['spice-2']['sek'],
+                'market_cap': data['spice-2']['usd_market_cap']  # Added market cap
             }
         }
     except Exception as e:
@@ -47,7 +51,7 @@ def save_to_csv(prices, DATA_FILE, API_KEY):
                     'spice_usd', 'spice_sek', 'api_key'
                 ])
             
-            # Write data row
+            # Write data row (without market cap)
             writer.writerow([
                 datetime.now().isoformat(),
                 prices['akt']['usd'],
@@ -87,6 +91,22 @@ def format_price(price, currency, spice=False):
         return f"${price:,.2f}"
     return f"{price:,.8f}"
 
+def format_market_cap(market_cap):
+    """Format market cap with appropriate units (M, B, T)"""
+    if market_cap is None:
+        return "N/A"
+    
+    if market_cap >= 1_000_000_000_000:  # Trillions
+        return f"${market_cap / 1_000_000_000_000:.2f}T"
+    elif market_cap >= 1_000_000_000:  # Billions
+        return f"${market_cap / 1_000_000_000:.2f}B"
+    elif market_cap >= 1_000_000:  # Millions
+        return f"${market_cap / 1_000_000:.2f}M"
+    elif market_cap >= 1_000:  # Thousands
+        return f"${market_cap / 1_000:.2f}K"
+    else:
+        return f"${market_cap:,.0f}"
+
 def load_price_history(DATA_FILE):
     """Load historical price data from CSV"""
     if not DATA_FILE.exists():
@@ -104,3 +124,6 @@ def load_price_history(DATA_FILE):
     except Exception as e:
         st.error(f"Error loading price history: {str(e)}")
         return pd.DataFrame()
+
+# utils.py (add this new function at the bottom)
+
